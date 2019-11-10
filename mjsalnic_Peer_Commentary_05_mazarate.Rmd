@@ -1,0 +1,128 @@
+---
+title: "Original HW Code 5"
+author: "Mel Zarate"
+date: "11/5/2019"
+output: html_document
+---
+
+Homework: Bootstrapping SE and CIs for Linear Models
+
+[1] Using the “KamilarAndCooperData.csv” dataset, run a linear regression looking at log(HomeRange_km2) in relation to log(Body_mass_female_mean) and report your β coeffiecients (slope and intercept).
+
+Load the data: 
+```{r}
+library(curl)
+f <- curl("https://raw.githubusercontent.com/fuzzyatelin/fuzzyatelin.github.io/master/AN597_Fall19/KamilarAndCooperData.csv")
+d <- read.csv(f, header = TRUE, sep = ",", stringsAsFactors = FALSE)
+head(d)
+```
+
+A linear regression looking at log(HomeRange_km2) in relation to log(Body_mass_female_mean):
+
+```{r}
+model <- lm(data = d, log(HomeRange_km2) ~ log(Body_mass_female_mean))
+plot(model)
+summary(model)
+```
+
+Finding Coefficients and confident intervals: 
+```{r}
+coefficients(model)
+confint(model, level = 0.95)
+```
+
+
+```{r}
+library(ggplot2)
+g <- ggplot(data = d, aes(x = log(Body_mass_female_mean), y = log(HomeRange_km2)))
+g <- g + geom_point()
+g <- g + geom_smooth(method = "lm", formula = y ~ x)
+g
+```
+
+
+[2] Then, use bootstrapping to sample from your data 1000 times with replacement, each time fitting the same model and calculating the same coefficients. This generates a sampling distribution for each β coefficient.
+
+
+I think it may help if I take out the NAs in my model 
+```{r}
+m <- lm(data = d, log(HomeRange_km2) ~ log(Body_mass_female_mean), na.action=na.exclude)
+plot(m)
+```
+
+I'm going to try bootstrapping using the boot() function and how we did it in the modules. 
+
+```{r}
+library(boot)
+?boot()
+bs <- boot(m, coef, labels=names(f(m)), R = 1000)
+summary(bs)
+#boot.ci(bs, conf = .95) #didn't work
+```
+
+
+```{r}
+set <- NULL 
+n <- 15 #going to have 15 in each sample
+for (i in 1:1000){
+  #Subset your data
+  #Run model on subset of data
+  #Extracting coefficients
+  #Placing coefficients into an object
+    set[i] <- coef(sample(m[1], n, replace=TRUE)) #bootstrapping data, running model on the subset, and extracting first coefficients (intercepts)
+}
+head(set)
+set
+```
+So this should be showing be the coefficients for the subsets that I sampled, but they are all the same? 
+
+Confidence intervals for this: 
+
+```{r}
+quantile(set, c(0.025, 0.975)) #they are all the same so I know what this will be...
+```
+
+
+This is for the slope
+```{r}
+set <- NULL 
+n <- 15 #going to have 15 in each sample
+m <- lm(data = d, log(HomeRange_km2) ~ log(Body_mass_female_mean))
+for (i in 1:1000){
+  set[i] <- coef(sample(m[2], n, replace=TRUE)) #second coefficient (slope)
+}
+head(set[ii])
+#get sampling distribution from bootstrap data for each coefficient
+```
+This one I'm not getting anything for, which is strange because it's almost the exact same code but with m[2] which should call for the second coefficient 
+
+-Estimate the standard error for each of your β coefficients as the standard deviation of the sampling distribution from your bootstrap 
+
+Standard error: 
+```{r}
+se(set)
+```
+
+
+-and determine the 95% CI for each of your β coefficients based on the appropriate quantiles from your sampling distribution.
+
+```{r}
+quantile(set, c(0.05, 0.975))
+```
+
+
+How does the former compare to the SE estimated from your entire dataset using the formula for standard error implemented in lm()?
+
+How does the latter compare to the 95% CI estimated from your entire dataset?
+
+Challenges: 
+1. I got a weird response for my bootstrap and am not sure if the code is correct. 
+2. Output of my boostrap is not giving CIs
+3. 
+
+Majo´s peer commentary:
+1. I used the boot function to do the bootstrapping and for that, I write a function in "two levels" because that how apparently works (I found that after searching in google) otherwise the statistic parameter will not work. Recall directly the model doesn't work for me
+2. Once you got the bootstrapping the CI might be obtained by using boot.ci function
+
+
+
